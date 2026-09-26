@@ -3,9 +3,9 @@
 ![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)
 ![JUnit 5](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apachemaven&logoColor=white)
-![Testes](https://img.shields.io/badge/testes-101%20passando-brightgreen)
+![Testes](https://img.shields.io/badge/testes-109%20passando-brightgreen)
 
-Projeto do **Módulo 25 da EBAC**: um CRUD completo de **clientes** e **produtos** em Java, organizado em camadas (domínio → DAO → service), com um **DAO genérico** reaproveitado pelas entidades, e coberto por testes unitários com **JUnit 5** e **mocks**.
+Projeto do **Módulo 25 da EBAC**: um CRUD completo de **clientes** e **produtos** em Java, organizado em camadas (domínio → DAO → service), com **DAO e service genéricos** reaproveitados pelas entidades, e coberto por testes unitários com **JUnit 5** e **mocks**.
 
 ---
 
@@ -48,14 +48,21 @@ classDiagram
         String descricao
         BigDecimal valor
     }
+    class IGenericService~T~ {
+        <<interface>>
+        salvar(T) Boolean
+        buscarPorId(Long) T
+        buscarTodos() Collection
+        alterar(T) Boolean
+        excluir(Long) Boolean
+    }
+    class GenericService~T~ {
+        <<abstract>>
+        validar(T)
+    }
     class IClienteService {
         <<interface>>
-        salvar(Cliente) Boolean
-        buscarPorId(Long) Cliente
         buscaClienteCPF(String) Cliente
-        buscarTodos() Collection
-        alterar(Cliente) Boolean
-        excluir(Long) Boolean
     }
     class Persistente {
         <<interface>>
@@ -91,6 +98,13 @@ classDiagram
     GenericDAO <|-- ClienteDAO
     GenericDAO <|-- ProdutoDAO
 
+    IGenericService <|.. GenericService
+    IGenericService <|-- IClienteService
+    IGenericService <|-- IProdutoService
+    GenericService <|-- ClienteService
+    GenericService <|-- ProdutoService
+    GenericService --> IGenericDAO : usa
+
     IClienteService <|.. ClienteService
     ClienteService --> IClienteDAO : usa
     IClienteDAO <|.. ClienteDAO
@@ -103,14 +117,20 @@ classDiagram
 ```
 
 - **Domínio** (`domain`): as entidades `Cliente` e `Produto`, que implementam `Persistente`.
-- **Genéricos** (`generics`): `IGenericDAO<T>` e `GenericDAO<T>` concentram o CRUD que serve para qualquer entidade `Persistente`.
+- **Genéricos** (`generics`): `IGenericDAO<T>`/`GenericDAO<T>` concentram o CRUD e `IGenericService<T>`/`GenericService<T>` as validações comuns (objeto nulo, id nulo). Servem para qualquer entidade `Persistente`.
 - **DAO** (`dao`): os DAOs específicos estendem o `GenericDAO` e só acrescentam o que é próprio da entidade (ex.: `buscarPorCpf`). Os dados ficam, por enquanto, em memória.
-- **Service** (`service`): aplica as regras de negócio e delega a persistência ao DAO.
+- **Service** (`service`): os services específicos estendem o `GenericService` e só acrescentam as regras próprias da entidade (ex.: CPF único do cliente), delegando a persistência ao DAO.
 
-Com o genérico, criar o DAO de uma nova entidade é uma linha:
+Com os genéricos, o DAO e o service de uma nova entidade ficam quase vazios:
 
 ```java
 public class ProdutoDAO extends GenericDAO<Produto> implements IProdutoDAO {
+}
+
+public class ProdutoService extends GenericService<Produto> implements IProdutoService {
+    public ProdutoService(IProdutoDAO produtoDAO) {
+        super(produtoDAO);
+    }
 }
 ```
 
@@ -135,12 +155,12 @@ IClienteService teste   = new ClienteService(new ClienteDAOMock());  // nos test
 src
 ├── main/java/br/com/ebac
 │   ├── domain/     Cliente, Produto
-│   ├── generics/   Persistente, IGenericDAO, GenericDAO
+│   ├── generics/   Persistente, IGenericDAO, GenericDAO, IGenericService, GenericService
 │   ├── dao/        IClienteDAO, ClienteDAO, IProdutoDAO, ProdutoDAO
 │   └── service/    IClienteService, ClienteService, IProdutoService, ProdutoService
 └── test/java/br/com/ebac
     ├── domain/     testes das entidades
-    ├── generics/   teste do DAO genérico com uma entidade própria do teste
+    ├── generics/   testes do DAO e do service genéricos com uma entidade própria do teste
     ├── dao/        testes dos DAOs + ClienteDAOMock, ProdutoDAOMock
     ├── service/    testes dos services usando os mocks
     └── crud/       testes de ponta a ponta (service + DAO reais)
@@ -153,7 +173,7 @@ src
 | Camada | O que é testado | Testes |
 |---|---|:---:|
 | Domínio | construtores, getters/setters, `equals`/`hashCode`, `toString` | 20 |
-| Genérico | CRUD do `GenericDAO` com uma entidade criada só para o teste | 7 |
+| Genérico | `GenericDAO` e `GenericService` com uma entidade criada só para o teste | 15 |
 | DAO | salvar, buscar, listar, alterar e excluir no DAO real | 29 |
 | Service | regras de negócio isoladas com os **mocks** do DAO | 30 |
 | CRUD | fluxo completo criar → ler → alterar → excluir | 14 |
@@ -181,7 +201,7 @@ mvnw.cmd test
 Resultado esperado:
 
 ```
-[INFO] Tests run: 101, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 109, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
