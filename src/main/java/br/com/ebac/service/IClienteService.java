@@ -1,20 +1,9 @@
 package br.com.ebac.service;
 
-import java.util.Collection;
-
 import br.com.ebac.domain.Cliente;
+import br.com.ebac.generics.IGenericService;
 
-public interface IClienteService {
-
-    Boolean salvar(Cliente cliente);
-
-    Cliente buscarPorId(Long id);
+public interface IClienteService extends IGenericService<Cliente> {
 
     Cliente buscaClienteCPF(String cpf);
-
-    Collection<Cliente> buscarTodos();
-
-    Boolean alterar(Cliente cliente);
-
-    Boolean excluir(Long id);
 }
