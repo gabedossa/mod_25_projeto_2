@@ -1,20 +1,9 @@
 package br.com.ebac.dao;
 
-import java.util.Collection;
-
 import br.com.ebac.domain.Cliente;
+import br.com.ebac.generics.IGenericDAO;
 
-public interface IClienteDAO {
-
-    Boolean salvar(Cliente cliente);
-
-    Cliente buscarPorId(Long id);
+public interface IClienteDAO extends IGenericDAO<Cliente> {
 
     Cliente buscarPorCpf(String cpf);
-
-    Collection<Cliente> buscarTodos();
-
-    Boolean alterar(Cliente cliente);
-
-    Boolean excluir(Long id);
 }

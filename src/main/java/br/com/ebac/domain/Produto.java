@@ -3,7 +3,9 @@ package br.com.ebac.domain;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-public class Produto {
+import br.com.ebac.generics.Persistente;
+
+public class Produto implements Persistente {
 
     private Long id;
     private String nome;
@@ -20,6 +22,7 @@ public class Produto {
         this.valor = valor;
     }
 
+    @Override
     public Long getId() {
         return id;
     }

@@ -3,7 +3,9 @@ package br.com.ebac.domain;
 import java.time.LocalDate;
 import java.util.Objects;
 
-public class Cliente {
+import br.com.ebac.generics.Persistente;
+
+public class Cliente implements Persistente {
 
     private Long id;
     private String nome;
@@ -24,6 +26,7 @@ public class Cliente {
         this.telefone = telefone;
     }
 
+    @Override
     public Long getId() {
         return id;
     }
