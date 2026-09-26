@@ -3,9 +3,9 @@
 ![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)
 ![JUnit 5](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apachemaven&logoColor=white)
-![Testes](https://img.shields.io/badge/testes-94%20passando-brightgreen)
+![Testes](https://img.shields.io/badge/testes-101%20passando-brightgreen)
 
-Projeto do **Módulo 25 da EBAC**: um CRUD completo de **clientes** e **produtos** em Java, organizado em camadas (domínio → DAO → service) e coberto por testes unitários com **JUnit 5** e **mocks**.
+Projeto do **Módulo 25 da EBAC**: um CRUD completo de **clientes** e **produtos** em Java, organizado em camadas (domínio → DAO → service), com um **DAO genérico** reaproveitado pelas entidades, e coberto por testes unitários com **JUnit 5** e **mocks**.
 
 ---
 
@@ -57,8 +57,24 @@ classDiagram
         alterar(Cliente) Boolean
         excluir(Long) Boolean
     }
+    class Persistente {
+        <<interface>>
+        getId() Long
+    }
+    class IGenericDAO~T~ {
+        <<interface>>
+        salvar(T) Boolean
+        buscarPorId(Long) T
+        buscarTodos() Collection
+        alterar(T) Boolean
+        excluir(Long) Boolean
+    }
+    class GenericDAO~T~ {
+        <<abstract>>
+    }
     class IClienteDAO {
         <<interface>>
+        buscarPorCpf(String) Cliente
     }
     class IProdutoService {
         <<interface>>
@@ -66,6 +82,14 @@ classDiagram
     class IProdutoDAO {
         <<interface>>
     }
+
+    Persistente <|.. Cliente
+    Persistente <|.. Produto
+    IGenericDAO <|.. GenericDAO
+    IGenericDAO <|-- IClienteDAO
+    IGenericDAO <|-- IProdutoDAO
+    GenericDAO <|-- ClienteDAO
+    GenericDAO <|-- ProdutoDAO
 
     IClienteService <|.. ClienteService
     ClienteService --> IClienteDAO : usa
@@ -78,9 +102,17 @@ classDiagram
     IProdutoDAO <|.. ProdutoDAOMock : testes
 ```
 
-- **Domínio** (`domain`): as entidades `Cliente` e `Produto`.
-- **DAO** (`dao`): guarda os dados (por enquanto em memória).
+- **Domínio** (`domain`): as entidades `Cliente` e `Produto`, que implementam `Persistente`.
+- **Genéricos** (`generics`): `IGenericDAO<T>` e `GenericDAO<T>` concentram o CRUD que serve para qualquer entidade `Persistente`.
+- **DAO** (`dao`): os DAOs específicos estendem o `GenericDAO` e só acrescentam o que é próprio da entidade (ex.: `buscarPorCpf`). Os dados ficam, por enquanto, em memória.
 - **Service** (`service`): aplica as regras de negócio e delega a persistência ao DAO.
+
+Com o genérico, criar o DAO de uma nova entidade é uma linha:
+
+```java
+public class ProdutoDAO extends GenericDAO<Produto> implements IProdutoDAO {
+}
+```
 
 O service recebe o DAO **pelo construtor**. Isso permite trocar o DAO real por um **mock** nos testes:
 
@@ -103,10 +135,12 @@ IClienteService teste   = new ClienteService(new ClienteDAOMock());  // nos test
 src
 ├── main/java/br/com/ebac
 │   ├── domain/     Cliente, Produto
+│   ├── generics/   Persistente, IGenericDAO, GenericDAO
 │   ├── dao/        IClienteDAO, ClienteDAO, IProdutoDAO, ProdutoDAO
 │   └── service/    IClienteService, ClienteService, IProdutoService, ProdutoService
 └── test/java/br/com/ebac
     ├── domain/     testes das entidades
+    ├── generics/   teste do DAO genérico com uma entidade própria do teste
     ├── dao/        testes dos DAOs + ClienteDAOMock, ProdutoDAOMock
     ├── service/    testes dos services usando os mocks
     └── crud/       testes de ponta a ponta (service + DAO reais)
@@ -119,6 +153,7 @@ src
 | Camada | O que é testado | Testes |
 |---|---|:---:|
 | Domínio | construtores, getters/setters, `equals`/`hashCode`, `toString` | 20 |
+| Genérico | CRUD do `GenericDAO` com uma entidade criada só para o teste | 7 |
 | DAO | salvar, buscar, listar, alterar e excluir no DAO real | 29 |
 | Service | regras de negócio isoladas com os **mocks** do DAO | 30 |
 | CRUD | fluxo completo criar → ler → alterar → excluir | 14 |
@@ -146,7 +181,7 @@ mvnw.cmd test
 Resultado esperado:
 
 ```
-[INFO] Tests run: 94, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 101, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
